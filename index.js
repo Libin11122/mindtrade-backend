@@ -20,15 +20,29 @@ app.get("/health", (req, res) => {
  */
 app.get("/upstox/callback", async (req, res) => {
   const code = req.query.code;
-  console.log("Received Upstox code:", code);
+  if (!code) return res.send("❌ No code received from Upstox");
 
-  if (!code) {
-    return res.send("❌ No code received from Upstox");
+  try {
+    const response = await axios.post(
+      "https://api.upstox.com/v2/login/authorization/token",
+      new URLSearchParams({
+        code,
+        client_id: process.env.UPSTOX_API_KEY,
+        client_secret: process.env.UPSTOX_API_SECRET,
+        grant_type: "authorization_code",
+        redirect_uri: process.env.UPSTOX_REDIRECT_URI
+      }),
+      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+    );
+
+    const accessToken = response.data.access_token;
+    console.log("UPSTOX_ACCESS_TOKEN:", accessToken);
+
+    res.send("Upstox connected ✔ You can close this window.");
+  } catch (err) {
+    console.error("Upstox token error:", err.response?.data || err.message);
+    res.status(500).send("Error getting token from Upstox");
   }
-
-  // In the NEXT step we will exchange this code for an access token.
-  // For now we just show a success message.
-  res.send("Upstox login callback received ✔ You can close this window.");
 });
 
 // Placeholder API that Lovable can call later
