@@ -3,23 +3,24 @@ import axios from "axios";
 
 const app = express();
 
-// Simple home route so we know server works
+// =========================
+// Basic routes
+// =========================
+
 app.get("/", (req, res) => {
   res.send("MindTrade backend is LIVE 🚀");
 });
 
-// Health check route
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
-/**
- * This route will be your Upstox redirect URL.
- * Later you'll put this full URL into the Upstox developer portal.
- * For now it just prints the ?code=... so we can see it's working.
- */
+// =========================
+// Upstox OAuth Callback
+// =========================
+
 app.get("/upstox/callback", async (req, res) => {
-  const code = req.query.code;               // 👈 this was missing
+  const code = req.query.code;
   if (!code) return res.send("❌ No code received");
 
   try {
@@ -28,7 +29,7 @@ app.get("/upstox/callback", async (req, res) => {
       client_id: process.env.UPSTOX_API_KEY,
       client_secret: process.env.UPSTOX_API_SECRET,
       redirect_uri: process.env.UPSTOX_REDIRECT_URI,
-      grant_type: "authorization_code"
+      grant_type: "authorization_code",
     });
 
     const { data } = await axios.post(
@@ -37,8 +38,8 @@ app.get("/upstox/callback", async (req, res) => {
       {
         headers: {
           accept: "application/json",
-          "Content-Type": "application/x-www-form-urlencoded"
-        }
+          "Content-Type": "application/x-www-form-urlencoded",
+        },
       }
     );
 
@@ -50,59 +51,60 @@ app.get("/upstox/callback", async (req, res) => {
   }
 });
 
-
-// Placeholder API that Lovable can call later
+// Simple test route for Lovable
 app.get("/api/ping", (req, res) => {
   res.json({
     ok: true,
-    message: "Backend is ready to connect Lovable & Upstox"
+    message: "Backend is ready to connect Lovable & Upstox",
   });
 });
 
-// =====================================
-// 🔥 NIFTY Option Chain → OI + PCR + Bias
-// =====================================
+// =========================
+// NIFTY Option Chain → OI + PCR + Bias
+// =========================
+
 app.get("/api/nifty/option-data", async (req, res) => {
   try {
     const instrument = "NSE_INDEX|Nifty 50";
 
-    console.log("Using token starts with:", process.env.UPSTOX_ACCESS_TOKEN?.slice(0, 15));
+    console.log(
+      "Using token starts with:",
+      process.env.UPSTOX_ACCESS_TOKEN?.slice(0, 15)
+    );
 
     const response = await axios.get(
-  "https://api.upstox.com/v2/option/chain",
-  {
-    params: { 
-      instrument_key: instrument,
-      expiry_date: "2025-12-09"   // 👈 put a valid weekly/monthly expiry here
-    },
-    headers: {
-      Authorization: `Bearer ${process.env.UPSTOX_ACCESS_TOKEN}`,
-      Accept: "application/json"
-    }
-  }
-);
-
+      "https://api.upstox.com/v2/option/chain",
+      {
+        params: {
+          instrument_key: instrument,
+          // expiry_date: "2025-12-11", // optional: set a valid expiry if needed
+        },
+        headers: {
+          Authorization: `Bearer ${process.env.UPSTOX_ACCESS_TOKEN}`,
+          Accept: "application/json",
+        },
+      }
+    );
 
     const chain = response.data?.data || [];
 
-    let callOI = 0, putOI = 0;
-    chain.forEach(strike => {
+    let callOI = 0,
+      putOI = 0;
+    chain.forEach((strike) => {
       callOI += strike.call_options?.market_data?.oi || 0;
-      putOI  += strike.put_options?.market_data?.oi  || 0;
+      putOI += strike.put_options?.market_data?.oi || 0;
     });
 
     const pcr = (putOI / callOI).toFixed(2);
     const bias =
-      pcr > 1.05 ? "Bullish" :
-      pcr < 0.85 ? "Bearish" :
-      "Neutral";
+      pcr > 1.05 ? "Bullish" : pcr < 0.85 ? "Bearish" : "Neutral";
 
     res.json({
       PCR: pcr,
       trendBias: bias,
       totalCallOI: callOI,
       totalPutOI: putOI,
-      chain
+      chain,
     });
   } catch (err) {
     console.error("NIFTY OI error:", err.response?.data || err.message);
@@ -110,7 +112,10 @@ app.get("/api/nifty/option-data", async (req, res) => {
   }
 });
 
+// =========================
 // Start server
+// =========================
+
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log("MindTrade backend running on port", PORT);
