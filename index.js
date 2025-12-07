@@ -19,29 +19,37 @@ app.get("/health", (req, res) => {
  * For now it just prints the ?code=... so we can see it's working.
  */
 app.get("/upstox/callback", async (req, res) => {
-  const url = "https://api.upstox.com/v2/login/authorization/token";
+  const code = req.query.code;               // 👈 this was missing
   if (!code) return res.send("❌ No code received");
 
   try {
+    const body = new URLSearchParams({
+      code,
+      client_id: process.env.UPSTOX_API_KEY,
+      client_secret: process.env.UPSTOX_API_SECRET,
+      redirect_uri: process.env.UPSTOX_REDIRECT_URI,
+      grant_type: "authorization_code"
+    });
+
     const { data } = await axios.post(
       "https://api.upstox.com/v2/login/authorization/token",
+      body,
       {
-        code: code,
-        client_id: process.env.UPSTOX_API_KEY,
-        client_secret: process.env.UPSTOX_API_SECRET,
-        redirect_uri: process.env.UPSTOX_REDIRECT_URI,
-        grant_type: "authorization_code"
+        headers: {
+          accept: "application/json",
+          "Content-Type": "application/x-www-form-urlencoded"
+        }
       }
     );
 
     console.log("🔥 NEW ACCESS TOKEN:", data.access_token);
-
     res.send("Token received ✔ Copy latest token from logs & update env.");
   } catch (err) {
     console.error("Error getting token:", err.response?.data || err);
     res.send("❌ Failed to generate token. Check logs.");
   }
 });
+
 
 // Placeholder API that Lovable can call later
 app.get("/api/ping", (req, res) => {
