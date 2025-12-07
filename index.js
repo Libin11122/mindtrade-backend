@@ -19,7 +19,7 @@ app.get("/health", (req, res) => {
  * For now it just prints the ?code=... so we can see it's working.
  */
 app.get("/upstox/callback", async (req, res) => {
-  const code = req.query.code;
+  const url = "https://api.upstox.com/v2/login/authorization/token";
   if (!code) return res.send("❌ No code received");
 
   try {
