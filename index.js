@@ -53,6 +53,51 @@ app.get("/api/ping", (req, res) => {
   });
 });
 
+// =====================================
+// 🔥 NIFTY Option Chain → OI + PCR + Bias
+// =====================================
+app.get("/api/nifty/option-data", async (req, res) => {
+  try {
+    const instrument = "NSE_INDEX|Nifty 50";
+
+    const response = await axios.get(
+      "https://api.upstox.com/v2/option/chain",
+      {
+        params: { instrument_key: instrument },
+        headers: {
+          Authorization: `Bearer ${process.env.UPSTOX_ACCESS_TOKEN}`,
+          Accept: "application/json"
+        }
+      }
+    );
+
+    const chain = response.data?.data || [];
+
+    let callOI = 0, putOI = 0;
+    chain.forEach(strike => {
+      callOI += strike.call_options?.market_data?.oi || 0;
+      putOI  += strike.put_options?.market_data?.oi  || 0;
+    });
+
+    const pcr = (putOI / callOI).toFixed(2);
+    const bias =
+      pcr > 1.05 ? "Bullish" :
+      pcr < 0.85 ? "Bearish" :
+      "Neutral";
+
+    res.json({
+      PCR: pcr,
+      trendBias: bias,
+      totalCallOI: callOI,
+      totalPutOI: putOI,
+      chain
+    });
+  } catch (err) {
+    console.error("NIFTY OI error:", err.response?.data || err.message);
+    res.status(500).send("Unable to fetch NIFTY OI right now");
+  }
+});
+
 // Start server
 const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
