@@ -3,10 +3,9 @@ import axios from "axios";
 
 const app = express();
 
-// =========================
+// --------------------
 // Basic routes
-// =========================
-
+// --------------------
 app.get("/", (req, res) => {
   res.send("MindTrade backend is LIVE 🚀");
 });
@@ -15,10 +14,9 @@ app.get("/health", (req, res) => {
   res.json({ status: "ok" });
 });
 
-// =========================
-// Upstox OAuth Callback
-// =========================
-
+// --------------------
+// Upstox OAuth callback
+// --------------------
 app.get("/upstox/callback", async (req, res) => {
   const code = req.query.code;
   if (!code) return res.send("❌ No code received");
@@ -39,6 +37,7 @@ app.get("/upstox/callback", async (req, res) => {
         headers: {
           accept: "application/json",
           "Content-Type": "application/x-www-form-urlencoded",
+          "Api-Version": "2.0",
         },
       }
     );
@@ -51,72 +50,22 @@ app.get("/upstox/callback", async (req, res) => {
   }
 });
 
-// Simple test route for Lovable
-app.get("/api/ping", (req, res) => {
-  res.json({
-    ok: true,
-    message: "Backend is ready to connect Lovable & Upstox",
-  });
-});
-
-// =========================
-// NIFTY Option Chain → OI + PCR + Bias
-// =========================
-
-app.get("/api/nifty/option-data", async (req, res) => {
+// --------------------
+// Test token: user profile
+// --------------------
+app.get("/api/upstox/profile", async (req, res) => {
   try {
-    const instrument = "NSE_INDEX|Nifty 50";
-
-    console.log(
-      "Using token starts with:",
-      process.env.UPSTOX_ACCESS_TOKEN?.slice(0, 15)
-    );
-
     const response = await axios.get(
-      "https://api.upstox.com/v2/option/chain",
+      "https://api.upstox.com/v2/user/profile",
       {
-        params: {
-          instrument_key: instrument,
-          // expiry_date: "2025-12-11", // optional: set a valid expiry if needed
-        },
         headers: {
           Authorization: `Bearer ${process.env.UPSTOX_ACCESS_TOKEN}`,
           Accept: "application/json",
+          "Api-Version": "2.0",
         },
       }
     );
 
-    const chain = response.data?.data || [];
-
-    let callOI = 0,
-      putOI = 0;
-    chain.forEach((strike) => {
-      callOI += strike.call_options?.market_data?.oi || 0;
-      putOI += strike.put_options?.market_data?.oi || 0;
-    });
-
-    const pcr = (putOI / callOI).toFixed(2);
-    const bias =
-      pcr > 1.05 ? "Bullish" : pcr < 0.85 ? "Bearish" : "Neutral";
-
-    res.json({
-      PCR: pcr,
-      trendBias: bias,
-      totalCallOI: callOI,
-      totalPutOI: putOI,
-      chain,
-    });
+    res.json(response.data);
   } catch (err) {
-    console.error("NIFTY OI error:", err.response?.data || err.message);
-    res.status(500).send("Unable to fetch NIFTY OI right now");
-  }
-});
-
-// =========================
-// Start server
-// =========================
-
-const PORT = process.env.PORT || 3000;
-app.listen(PORT, () => {
-  console.log("MindTrade backend running on port", PORT);
-});
+    console.error("P
