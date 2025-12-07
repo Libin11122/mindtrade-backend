@@ -7,8 +7,9 @@ const app = express();
 // Basic routes
 // --------------------
 app.get("/", (req, res) => {
-  res.send("MindTrade backend is LIVE 🚀");
+  res.send("MindTrade backend v2 ✅");
 });
+
 
 app.get("/health", (req, res) => {
   res.json({ status: "ok" });
