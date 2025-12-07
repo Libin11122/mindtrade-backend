@@ -66,16 +66,22 @@ app.get("/api/nifty/option-data", async (req, res) => {
   try {
     const instrument = "NSE_INDEX|Nifty 50";
 
+    console.log("Using token starts with:", process.env.UPSTOX_ACCESS_TOKEN?.slice(0, 15));
+
     const response = await axios.get(
-      "https://api.upstox.com/v2/option/chain",
-      {
-        params: { instrument_key: instrument },
-        headers: {
-          Authorization: `Bearer ${process.env.UPSTOX_ACCESS_TOKEN}`,
-          Accept: "application/json"
-        }
-      }
-    );
+  "https://api.upstox.com/v2/option/chain",
+  {
+    params: { 
+      instrument_key: instrument,
+      expiry_date: "2025-12-09"   // 👈 put a valid weekly/monthly expiry here
+    },
+    headers: {
+      Authorization: `Bearer ${process.env.UPSTOX_ACCESS_TOKEN}`,
+      Accept: "application/json"
+    }
+  }
+);
+
 
     const chain = response.data?.data || [];
 
