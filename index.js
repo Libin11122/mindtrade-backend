@@ -20,28 +20,26 @@ app.get("/health", (req, res) => {
  */
 app.get("/upstox/callback", async (req, res) => {
   const code = req.query.code;
-  if (!code) return res.send("❌ No code received from Upstox");
+  if (!code) return res.send("❌ No code received");
 
   try {
-    const response = await axios.post(
+    const { data } = await axios.post(
       "https://api.upstox.com/v2/login/authorization/token",
-      new URLSearchParams({
-        code,
+      {
+        code: code,
         client_id: process.env.UPSTOX_API_KEY,
         client_secret: process.env.UPSTOX_API_SECRET,
-        grant_type: "authorization_code",
-        redirect_uri: process.env.UPSTOX_REDIRECT_URI
-      }),
-      { headers: { "Content-Type": "application/x-www-form-urlencoded" } }
+        redirect_uri: process.env.UPSTOX_REDIRECT_URI,
+        grant_type: "authorization_code"
+      }
     );
 
-    const accessToken = response.data.access_token;
-    console.log("UPSTOX_ACCESS_TOKEN:", accessToken);
+    console.log("🔥 NEW ACCESS TOKEN:", data.access_token);
 
-    res.send("Upstox connected ✔ You can close this window.");
+    res.send("Token received ✔ Copy latest token from logs & update env.");
   } catch (err) {
-    console.error("Upstox token error:", err.response?.data || err.message);
-    res.status(500).send("Error getting token from Upstox");
+    console.error("Error getting token:", err.response?.data || err);
+    res.send("❌ Failed to generate token. Check logs.");
   }
 });
 
